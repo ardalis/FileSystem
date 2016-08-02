@@ -370,6 +370,93 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Tests
         }
 
         [Fact]
+        public void StemCorrectWithDifferentWildCards2()
+        {
+            var matcher = new Matcher();
+            matcher.AddInclude("sub/*.cs");
+            matcher.AddInclude("**/*.cs");
+
+            var files = new System.Collections.Generic.List<string> { "src/project/source1.cs",
+                "src/project/sub/source2.cs",
+                "src/project/sub/source3.cs",
+                "src/project/sub2/source4.cs",
+                "src/project/sub2/source5.cs",
+                "src/project/compiler/preprocess/preprocess-source1.cs",
+                "src/project/compiler/preprocess/sub/preprocess-source2.cs",
+                "src/project/compiler/preprocess/sub/sub/preprocess-source3.cs",
+                "src/project/compiler/preprocess/sub/sub/preprocess-source3.txt",
+                "src/project/compiler/shared/shared1.cs",
+                "src/project/compiler/shared/shared1.txt",
+                "src/project/compiler/shared/sub/shared2.cs",
+                "src/project/compiler/shared/sub/shared2.txt",
+                "src/project/compiler/shared/sub/sub/sharedsub.cs",
+                "src/project/compiler/resources/resource.res",
+                "src/project/compiler/resources/sub/resource2.res",
+                "src/project/compiler/resources/sub/sub/resource3.res",
+                "src/project/content1.txt",
+                "src/project/obj/object.o",
+                "src/project/bin/object",
+                "src/project/.hidden/file1.hid",
+                "src/project/.hidden/sub/file2.hid",
+                "src/project2/source1.cs",
+                "src/project2/sub/source2.cs",
+                "src/project2/sub/source3.cs",
+                "src/project2/sub2/source4.cs",
+                "src/project2/sub2/source5.cs",
+                "src/project2/compiler/preprocess/preprocess-source1.cs",
+                "src/project2/compiler/preprocess/sub/preprocess-source2.cs",
+                "src/project2/compiler/preprocess/sub/sub/preprocess-source3.cs",
+                "src/project2/compiler/preprocess/sub/sub/preprocess-source3.txt",
+                "src/project2/compiler/shared/shared1.cs",
+                "src/project2/compiler/shared/shared1.txt",
+                "src/project2/compiler/shared/sub/shared2.cs",
+                "src/project2/compiler/shared/sub/shared2.txt",
+                "src/project2/compiler/shared/sub/sub/sharedsub.cs",
+                "src/project2/compiler/resources/resource.res",
+                "src/project2/compiler/resources/sub/resource2.res",
+                "src/project2/compiler/resources/sub/sub/resource3.res",
+                "src/project2/content1.txt",
+                "src/project2/obj/object.o",
+                "src/project2/bin/object",
+                "lib/source6.cs",
+                "lib/sub3/source7.cs",
+                "lib/sub4/source8.cs",
+                "res/resource1.text",
+                "res/resource2.text",
+                "res/resource3.text",
+                ".hidden/file1.hid",
+                ".hidden/sub/file2.hid" };
+
+            for (int i = 0; i < files.Count; ++i)
+            {
+                files[i] = Path.Combine(_context.RootPath, files[i]);
+            }
+
+            var directoryPath = Path.Combine(_context.RootPath, "src/project");
+            var results = matcher.Execute(new InMemoryDirectoryInfo(new DirectoryInfo(directoryPath), files));
+
+            var actual = results.Files.Select(match => match.Stem);
+            var expected = new string[] {
+                "source1.cs",
+                "source2.cs",
+                "source3.cs",
+                "sub2/source4.cs",
+                "sub2/source5.cs",
+                "compiler/preprocess/preprocess-source1.cs",
+                "compiler/preprocess/sub/preprocess-source2.cs",
+                "compiler/preprocess/sub/sub/preprocess-source3.cs",
+                "compiler/shared/shared1.cs",
+                "compiler/shared/sub/shared2.cs",
+                "compiler/shared/sub/sub/sharedsub.cs"
+            };
+
+            Assert.Equal(
+                expected.OrderBy(e => e),
+                actual.OrderBy(e => e),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        [Fact]
         public void MultipleSubDirsAfterFirstWildcardMatch_HasCorrectStem()
         {
             var matcher = new Matcher();
