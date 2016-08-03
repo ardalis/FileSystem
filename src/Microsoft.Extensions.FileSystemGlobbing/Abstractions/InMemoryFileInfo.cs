@@ -8,28 +8,16 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
 {
     public class InMemoryFileInfo : FileInfoBase
     {
-        private FileInfo _fileInfo;
         private InMemoryDirectoryInfo _parent;
-        public InMemoryFileInfo(FileInfo file, InMemoryDirectoryInfo parent)
+        public InMemoryFileInfo(string file, InMemoryDirectoryInfo parent)
         {
-            _fileInfo = file;
+            FullName = file;
+            Name = Path.GetFileName(file);
             _parent = parent;
         }
-        public override string FullName
-        {
-            get
-            {
-                return _fileInfo.FullName;
-            }
-        }
+        public override string FullName { get; }
 
-        public override string Name
-        {
-            get
-            {
-                return _fileInfo.Name;
-            }
-        }
+        public override string Name { get; }
 
         public override DirectoryInfoBase ParentDirectory
         {

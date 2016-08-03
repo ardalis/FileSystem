@@ -9,10 +9,9 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
     public class InMemoryDirectoryInfo : DirectoryInfoBase
     {
         private static readonly char[] DirectorySeparators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
-        private readonly DirectoryInfo _directoryInfo;
         private readonly List<string> _files;
 
-        public InMemoryDirectoryInfo(DirectoryInfo rootDir, List<string> files)
+        public InMemoryDirectoryInfo(string rootDir, List<string> files)
         {
             if (files == null)
             {
@@ -21,36 +20,35 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
             else
             {
                 _files = files;
+
+                // normalize
                 for (int i = 0; i < _files.Count; ++i)
                 {
                     _files[i] = Path.GetFullPath(_files[i].Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
                 }
             }
 
-            _directoryInfo = rootDir;
+            FullName = Path.GetFullPath(rootDir.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
+            Name = Path.GetFileName(rootDir);
         }
 
-        public override string FullName
+        // This is to avoid the overhead of Path.GetFullPath from the public constructor
+        private InMemoryDirectoryInfo(string rootDir, List<string> files, bool normalized)
         {
-            get
-            {
-                return _directoryInfo.FullName;
-            }
+            _files = files;
+            FullName = rootDir;
+            Name = Path.GetFileName(rootDir);
         }
 
-        public override string Name
-        {
-            get
-            {
-                return _directoryInfo.Name;
-            }
-        }
+        public override string FullName { get; }
+
+        public override string Name { get; }
 
         public override DirectoryInfoBase ParentDirectory
         {
             get
             {
-                return new InMemoryDirectoryInfo(_directoryInfo.Parent, _files);
+                return new InMemoryDirectoryInfo(Path.GetDirectoryName(FullName), _files, true);
             }
         }
 
@@ -59,36 +57,34 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
             var dict = new Dictionary<string, List<string>>();
             foreach (var file in _files)
             {
-                var fullPath = Path.GetFullPath(file);
-                if (!IsRootDirectory(FullName, fullPath))
+                if (!IsRootDirectory(FullName, file))
                 {
                     continue;
                 }
-                var endPath = fullPath.Length;
 
-                var beginPath = FullName.Length;
-                var beginSegment = beginPath + 1;
-                var endSegment = NextIndex(fullPath, DirectorySeparators, beginSegment, fullPath.Length);
+                var endPath = file.Length;
+                var beginSegment = FullName.Length + 1;
+                var endSegment = NextIndex(file, DirectorySeparators, beginSegment, file.Length);
 
                 if (endPath == endSegment)
                 {
-                    yield return new InMemoryFileInfo(new FileInfo(fullPath), this);
+                    yield return new InMemoryFileInfo(file, this);
                 }
                 else
                 {
-                    var name = fullPath.Substring(0, endSegment);
+                    var name = file.Substring(0, endSegment);
                     List<string> list;
                     if (!dict.TryGetValue(name, out list))
                     {
                         dict[name] = new List<string>();
                     }
-                    dict[name].Add(fullPath);
+                    dict[name].Add(file);
                 }
             }
 
             foreach (var item in dict)
             {
-                yield return new InMemoryDirectoryInfo(new DirectoryInfo(item.Key), item.Value);
+                yield return new InMemoryDirectoryInfo(item.Key, item.Value, true);
             }
         }
 
@@ -100,8 +96,8 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
 
         private bool IsRootDirectory(string rootDir, string filePath)
         {
-            if (!filePath.StartsWith(rootDir)
-                || filePath.IndexOfAny(DirectorySeparators, rootDir.Length) != rootDir.Length)
+            if (!filePath.StartsWith(rootDir, StringComparison.Ordinal)
+                || filePath.IndexOf(Path.DirectorySeparatorChar, rootDir.Length) != rootDir.Length)
             {
                 return false;
             }
@@ -113,34 +109,26 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
         {
             if (string.Equals(path, "..", StringComparison.Ordinal))
             {
-                var parentFiles = new List<string>();
-                foreach (var file in _files)
-                {
-                    parentFiles.Add(Path.Combine(_directoryInfo.Parent.FullName, file));
-                }
-                return new InMemoryDirectoryInfo(new DirectoryInfo(Path.Combine(_directoryInfo.FullName, path)), parentFiles);
+                return new InMemoryDirectoryInfo(Path.Combine(FullName, path), _files, true);
             }
             else
             {
-                var list = new List<string>();
-                var fullDir = Path.GetFullPath(path);
-                foreach (var file in _files)
-                {
-                    var fullPath = Path.GetFullPath(file);
-                    if (!IsRootDirectory(fullDir, fullPath))
-                    {
-                        continue;
-                    }
-
-                    list.Add(file.Substring(fullDir.Length - 1));
-                }
-                return new InMemoryDirectoryInfo(new DirectoryInfo(path), list);
+                return new InMemoryDirectoryInfo(path, _files, true);
             }
         }
 
         public override FileInfoBase GetFile(string path)
         {
-            throw new NotImplementedException();
+            var normPath = Path.GetFullPath(path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
+            foreach (var file in _files)
+            {
+                if (string.Equals(file, normPath))
+                {
+                    return new InMemoryFileInfo(file, this);
+                }
+            }
+
+            return null;
         }
     }
 }
