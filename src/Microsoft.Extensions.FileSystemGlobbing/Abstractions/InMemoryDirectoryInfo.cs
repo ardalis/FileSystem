@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,35 +12,40 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
     public class InMemoryDirectoryInfo : DirectoryInfoBase
     {
         private static readonly char[] DirectorySeparators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
-        private readonly List<string> _files;
+        private readonly IEnumerable<string> _files;
 
-        public InMemoryDirectoryInfo(string rootDir, List<string> files)
+        public InMemoryDirectoryInfo(string rootDir, IEnumerable<string> files)
+            : this(rootDir, files, false)
+        {
+        }
+
+        private InMemoryDirectoryInfo(string rootDir, IEnumerable<string> files, bool normalized)
         {
             if (files == null)
             {
-                _files = new List<string>();
+                files = new List<string>();
+            }
+
+            Name = Path.GetFileName(rootDir);
+            if (normalized)
+            {
+                _files = files;
+                FullName = rootDir;
             }
             else
             {
-                _files = files;
+                var fileList = new List<string>(files.Count());
 
                 // normalize
-                for (int i = 0; i < _files.Count; ++i)
+                foreach (var file in files)
                 {
-                    _files[i] = Path.GetFullPath(_files[i].Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
+                    fileList.Add(Path.GetFullPath(file.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)));
                 }
+
+                _files = fileList;
+
+                FullName = Path.GetFullPath(rootDir.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
             }
-
-            FullName = Path.GetFullPath(rootDir.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
-            Name = Path.GetFileName(rootDir);
-        }
-
-        // This is to avoid the overhead of Path.GetFullPath from the public constructor
-        private InMemoryDirectoryInfo(string rootDir, List<string> files, bool normalized)
-        {
-            _files = files;
-            FullName = rootDir;
-            Name = Path.GetFileName(rootDir);
         }
 
         public override string FullName { get; }
@@ -76,9 +84,12 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
                     List<string> list;
                     if (!dict.TryGetValue(name, out list))
                     {
-                        dict[name] = new List<string>();
+                        dict[name] = new List<string> { file };
                     }
-                    dict[name].Add(file);
+                    else
+                    {
+                        list.Add(file);
+                    }
                 }
             }
 
