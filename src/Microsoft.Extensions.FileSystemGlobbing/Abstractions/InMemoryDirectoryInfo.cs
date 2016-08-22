@@ -5,15 +5,22 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
 {
+    /// <summary>
+    /// Avoids using disk for uses like Pattern Matching.
+    /// </summary>
     public class InMemoryDirectoryInfo : DirectoryInfoBase
     {
         private static readonly char[] DirectorySeparators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
         private readonly IEnumerable<string> _files;
 
+        /// <summary>
+        /// Creates a new InMemoryDirectoryInfo with the root directory and files given.
+        /// </summary>
+        /// <param name="rootDir">The root directory that this FileSystem will use.</param>
+        /// <param name="files">Collection of file names.</param>
         public InMemoryDirectoryInfo(string rootDir, IEnumerable<string> files)
             : this(rootDir, files, false)
         {
@@ -48,10 +55,20 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
             }
         }
 
+        /// <summary>
+        /// The full path for the root directory.
+        /// </summary>
         public override string FullName { get; }
 
+        /// <summary>
+        /// The directory name for the root directory.
+        /// </summary>
         public override string Name { get; }
 
+        /// <summary>
+        /// Gets an InMemoryDirectoryInfo that represents the
+        /// parent directory of the current InMemoryDirectoryInfo.
+        /// </summary>
         public override DirectoryInfoBase ParentDirectory
         {
             get
@@ -60,6 +77,10 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
             }
         }
 
+        /// <summary>
+        /// Enumerates the files and directories in the root directory.
+        /// </summary>
+        /// <returns>The list of directories and files in the root directory.</returns>
         public override IEnumerable<FileSystemInfoBase> EnumerateFileSystemInfos()
         {
             var dict = new Dictionary<string, List<string>>();
@@ -72,9 +93,9 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
 
                 var endPath = file.Length;
                 var beginSegment = FullName.Length + 1;
-                var endSegment = NextIndex(file, DirectorySeparators, beginSegment, file.Length);
+                var endSegment = file.IndexOfAny(DirectorySeparators, beginSegment, endPath - beginSegment);
 
-                if (endPath == endSegment)
+                if (endSegment == -1)
                 {
                     yield return new InMemoryFileInfo(file, this);
                 }
@@ -99,12 +120,6 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
             }
         }
 
-        private int NextIndex(string pattern, char[] anyOf, int startIndex, int endIndex)
-        {
-            var index = pattern.IndexOfAny(anyOf, startIndex, endIndex - startIndex);
-            return index == -1 ? endIndex : index;
-        }
-
         private bool IsRootDirectory(string rootDir, string filePath)
         {
             if (!filePath.StartsWith(rootDir, StringComparison.Ordinal)
@@ -116,6 +131,11 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
             return true;
         }
 
+        /// <summary>
+        /// Gets a new InMemoryDirectoryInfo using the <paramref name="path"/> for the root directory.
+        /// </summary>
+        /// <param name="path">The root directory that the new InMemoryDirectoryInfo will use.</param>
+        /// <returns>InMemoryDirectoryInfo with <paramref name="path"/> used for root directory.</returns>
         public override DirectoryInfoBase GetDirectory(string path)
         {
             if (string.Equals(path, "..", StringComparison.Ordinal))
@@ -124,10 +144,16 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
             }
             else
             {
-                return new InMemoryDirectoryInfo(path, _files, true);
+                var normPath = Path.GetFullPath(path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
+                return new InMemoryDirectoryInfo(normPath, _files, true);
             }
         }
 
+        /// <summary>
+        /// Gets an InMemoryFileInfo that matches the <paramref name="path"/> given.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <returns>InMemoryFileInfo for the <paramref name="path"/>.</returns>
         public override FileInfoBase GetFile(string path)
         {
             var normPath = Path.GetFullPath(path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar));
