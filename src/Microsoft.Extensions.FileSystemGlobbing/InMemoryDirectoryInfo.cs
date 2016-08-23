@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
+using Microsoft.Extensions.FileSystemGlobbing.Internal;
 
-namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
+namespace Microsoft.Extensions.FileSystemGlobbing
 {
     /// <summary>
     /// Avoids using disk for uses like Pattern Matching.
@@ -20,7 +22,7 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
         /// Creates a new InMemoryDirectoryInfo with the root directory and files given.
         /// </summary>
         /// <param name="rootDir">The root directory that this FileSystem will use.</param>
-        /// <param name="files">Collection of file names.</param>
+        /// <param name="files">Collection of file names. If relative paths <paramref name="rootDir"/> will be prepended to the paths.</param>
         public InMemoryDirectoryInfo(string rootDir, IEnumerable<string> files)
             : this(rootDir, files, false)
         {
@@ -28,6 +30,11 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Abstractions
 
         private InMemoryDirectoryInfo(string rootDir, IEnumerable<string> files, bool normalized)
         {
+            if (string.IsNullOrEmpty(rootDir))
+            {
+                throw new ArgumentNullException(nameof(rootDir));
+            }
+
             if (files == null)
             {
                 files = new List<string>();

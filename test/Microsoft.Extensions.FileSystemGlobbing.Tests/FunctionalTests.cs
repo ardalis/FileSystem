@@ -350,7 +350,8 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Tests
             var results = matcher.Execute(new DirectoryInfoWrapper(new DirectoryInfo(directoryPath)));
 
             var actual = results.Files.Select(match => match.Stem);
-            var expected = new string[] {
+            var expected = new string[]
+            {
                 "source1.cs",
                 "source2.cs",
                 "source3.cs",
@@ -379,10 +380,11 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Tests
 
             var files = GetFileList();
             var directoryPath = "src/project";
-            var results = matcher.Execute(new InMemoryDirectoryInfo(directoryPath, files));
+            var results = matcher.Match(directoryPath, files);
 
             var actual = results.Files.Select(match => match.Stem);
-            var expected = new string[] {
+            var expected = new string[]
+            {
                 "source1.cs",
                 "source2.cs",
                 "source3.cs",
@@ -412,7 +414,8 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Tests
             var results = matcher.Execute(new DirectoryInfoWrapper(new DirectoryInfo(directoryPath)));
 
             var actual = results.Files.Select(match => match.Stem);
-            var expected = new string[] {
+            var expected = new string[]
+            {
                 "preprocess/preprocess-source1.cs",
                 "preprocess/sub/preprocess-source2.cs",
                 "preprocess/sub/sub/preprocess-source3.cs",
@@ -435,10 +438,11 @@ namespace Microsoft.Extensions.FileSystemGlobbing.Tests
 
             var files = GetFileList();
             var directoryPath = "src/project";
-            var results = matcher.Execute(new InMemoryDirectoryInfo(directoryPath, files));
+            var results = matcher.Match(directoryPath, files);
 
             var actual = results.Files.Select(match => match.Stem);
-            var expected = new string[] {
+            var expected = new string[]
+            {
                 "preprocess/preprocess-source1.cs",
                 "preprocess/sub/preprocess-source2.cs",
                 "preprocess/sub/sub/preprocess-source3.cs",
